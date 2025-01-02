@@ -29,6 +29,7 @@ import org.dinky.gateway.enums.ActionType;
 import org.dinky.gateway.exception.GatewayException;
 import org.dinky.gateway.exception.NotSupportGetStatusException;
 import org.dinky.gateway.model.JobInfo;
+import org.dinky.gateway.result.CleanupResult;
 import org.dinky.gateway.result.GatewayResult;
 import org.dinky.gateway.result.SavePointResult;
 import org.dinky.utils.FlinkUtil;
@@ -223,6 +224,12 @@ public abstract class AbstractGateway implements Gateway {
     public GatewayResult deployCluster(FlinkUdfPathContextHolder udfPathContextHolder) {
         logger.error("Could not deploy the Flink cluster");
         return null;
+    }
+
+    @Override
+    public CleanupResult cleanup() {
+        // TODO: Each type of cluster overrides its own cleanup method.
+        throw new GatewayException(StrFormatter.format("{} Cluster cleanup is temporarily not supported.", getType()));
     }
 
     protected ClusterSpecification.ClusterSpecificationBuilder createClusterSpecificationBuilder() {

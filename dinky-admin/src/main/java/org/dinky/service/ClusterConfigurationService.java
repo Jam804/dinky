@@ -22,6 +22,7 @@ package org.dinky.service;
 import org.dinky.data.dto.ClusterConfigurationDTO;
 import org.dinky.data.model.ClusterConfiguration;
 import org.dinky.gateway.model.FlinkClusterConfig;
+import org.dinky.gateway.result.CleanupResult;
 import org.dinky.gateway.result.TestResult;
 import org.dinky.mybatis.service.ISuperService;
 
@@ -64,6 +65,15 @@ public interface ClusterConfigurationService extends ISuperService<ClusterConfig
      * @return A {@link TestResult} object representing the test results.
      */
     TestResult testGateway(ClusterConfigurationDTO clusterConfigurationDTO);
+
+    /**
+     * Cleanup the cluster.
+     *
+     * @param id {@link Integer} the cluster id to clean up.
+     * @return A {@link TestResult} the cleanup results.
+     */
+    CleanupResult cleanupCluster(Integer id);
+
 
     /**
      * Modify the status of a cluster configuration based on its ID.

@@ -78,6 +78,8 @@ public class PermissionConstants {
     public static final String REGISTRATION_CLUSTER_CONFIG_DELETE = "registration:cluster:config:delete";
     // heartbeats
     public static final String REGISTRATION_CLUSTER_CONFIG_HEARTBEATS = "registration:cluster:config:heartbeat";
+    // cleanup
+    public static final String REGISTRATION_CLUSTER_CONFIG_CLEANUP = "registration:cluster:config:cleanup ";
     // deploy
     public static final String REGISTRATION_CLUSTER_CONFIG_DEPLOY = "registration:cluster:config:deploy";
 

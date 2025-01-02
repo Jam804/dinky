@@ -93,6 +93,7 @@ public enum Status {
     OFFLINE_FAILED(9036, "offline.failed"),
     VERSION_ROLLBACK_SUCCESS(9037, "version.rollback.success"),
     VERSION_ROLLBACK_FAILED(9038, "version.rollback.failed"),
+    CLEANUP_CLUSTER_SUCCESS(9042, "cleanup.cluster.success"),
 
     /**
      * user,tenant,role
@@ -444,8 +445,8 @@ public enum Status {
     /**
      * gateway config
      */
-    GAETWAY_KUBERNETS_TEST_FAILED(180, "gateway.kubernetes.test.failed"),
-    GAETWAY_KUBERNETS_TEST_SUCCESS(181, "gateway.kubernetes.test.success"),
+    GATEWAY_KUBERNETES_TEST_FAILED(180, "gateway.kubernetes.test.failed"),
+    GATEWAY_KUBERNETES_TEST_SUCCESS(181, "gateway.kubernetes.test.success"),
 
     /**
      * process
@@ -468,6 +469,9 @@ public enum Status {
             204, "sys.flink.settings.flinkHistoryServerArchiveRefreshInterval"),
     SYS_FLINK_SETTINGS_FLINK_HISTORY_SERVER_ARCHIVE_REFRESH_INTERVAL_NOTE(
             205, "sys.flink.settings.flinkHistoryServerArchiveRefreshInterval.note"),
+
+    GATEWAY_KUBERNETES_CLEANUP_FAILED(206, "gateway.kubernetes.test.failed"),
+    GATEWAY_KUBERNETES_CLEANUP_SUCCESS(207, "gateway.kubernetes.test.success"),
     ;
     private final int code;
     private final String key;

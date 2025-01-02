@@ -26,6 +26,7 @@ import org.dinky.data.enums.BusinessType;
 import org.dinky.data.enums.Status;
 import org.dinky.data.model.ClusterConfiguration;
 import org.dinky.data.result.Result;
+import org.dinky.gateway.result.CleanupResult;
 import org.dinky.gateway.result.TestResult;
 import org.dinky.service.ClusterConfigurationService;
 
@@ -183,6 +184,26 @@ public class ClusterConfigurationController {
             return Result.succeed(Status.TEST_CONNECTION_SUCCESS);
         } else {
             return Result.failed(testResult.getError());
+        }
+    }
+
+    /**
+     * cleanup cluster
+     *
+     * @param id {@link Integer}
+     * @return {@link Result}<{@link Void}>
+     */
+    @GetMapping("/cleanup")
+    @Log(title = "Cleanup Cluster", businessType = BusinessType.UPDATE)
+    @ApiOperation("Cleanup Cluster")
+    @ApiImplicitParam(name = "id", value = "id", dataType = "Integer", paramType = "query", required = true)
+    @SaCheckPermission(value = PermissionConstants.REGISTRATION_CLUSTER_CONFIG_HEARTBEATS)
+    public Result<Void> testConnect(@RequestParam("id") Integer id) {
+        CleanupResult cleanupResult = clusterConfigurationService.cleanupCluster(id);
+        if (cleanupResult.isSuccess()) {
+            return Result.succeed(Status.CLEANUP_CLUSTER_SUCCESS);
+        } else {
+            return Result.failed(cleanupResult.getError());
         }
     }
 }

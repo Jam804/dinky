@@ -25,6 +25,7 @@ import org.dinky.data.enums.GatewayType;
 import org.dinky.data.enums.JobStatus;
 import org.dinky.gateway.config.GatewayConfig;
 import org.dinky.gateway.exception.GatewayException;
+import org.dinky.gateway.result.CleanupResult;
 import org.dinky.gateway.result.GatewayResult;
 import org.dinky.gateway.result.SavePointResult;
 import org.dinky.gateway.result.TestResult;
@@ -82,6 +83,8 @@ public interface Gateway {
     SavePointResult savepointJob(String savePoint);
 
     TestResult test();
+
+    CleanupResult cleanup();
 
     JobStatus getJobStatusById(String id);
 

@@ -22,9 +22,12 @@ package org.dinky.gateway.kubernetes;
 import static org.dinky.gateway.kubernetes.utils.DinkyKubernetsConstants.DINKY_K8S_INGRESS_DOMAIN_KEY;
 import static org.dinky.gateway.kubernetes.utils.DinkyKubernetsConstants.DINKY_K8S_INGRESS_ENABLED_KEY;
 
+import io.fabric8.kubernetes.api.model.PodList;
+import io.fabric8.kubernetes.api.model.apps.DeploymentList;
 import org.dinky.assertion.Asserts;
 import org.dinky.context.FlinkUdfPathContextHolder;
 import org.dinky.data.enums.GatewayType;
+import org.dinky.data.enums.Status;
 import org.dinky.data.model.SystemConfiguration;
 import org.dinky.executor.ClusterDescriptorAdapterImpl;
 import org.dinky.gateway.config.AppConfig;
@@ -34,6 +37,7 @@ import org.dinky.gateway.kubernetes.utils.IgnoreNullRepresenter;
 import org.dinky.gateway.kubernetes.utils.K8sClientHelper;
 import org.dinky.gateway.model.ingress.JobDetails;
 import org.dinky.gateway.model.ingress.JobOverviewInfo;
+import org.dinky.gateway.result.CleanupResult;
 import org.dinky.gateway.result.GatewayResult;
 import org.dinky.gateway.result.KubernetesResult;
 
@@ -52,12 +56,7 @@ import org.apache.flink.kubernetes.kubeclient.FlinkKubeClient;
 import org.apache.flink.kubernetes.utils.Constants;
 import org.apache.flink.runtime.client.JobStatusMessage;
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 import org.yaml.snakeyaml.Yaml;
@@ -344,6 +343,51 @@ public class KubernetesApplicationGateway extends KubernetesGateway {
             logger.warn("Get job overview warning, task manage is enabled and can be ignored");
         }
         return null;
+    }
+
+    @Override
+    public CleanupResult cleanup() {
+        try {
+            // Cleanup mode no jobName, use uuid .
+            addConfigParas(KubernetesConfigOptions.CLUSTER_ID, UUID.randomUUID().toString());
+            initConfig();
+            KubernetesClient kubernetesClient = getK8sClientHelper().getKubernetesClient();
+            String defaultNamespace = configuration.getString(KubernetesConfigOptions.NAMESPACE);
+            Asserts.checkNotNull(defaultNamespace, "defaultNamespace must not null when cleaning up");
+            DeploymentList deploymentList = kubernetesClient.apps()
+                    .deployments()
+                    .inNamespace(configuration.getString(KubernetesConfigOptions.NAMESPACE))
+                    .withLabel(Constants.LABEL_COMPONENT_KEY, Constants.LABEL_COMPONENT_JOB_MANAGER)
+                    .withLabel(Constants.LABEL_TYPE_KEY, Constants.LABEL_TYPE_NATIVE_TYPE)
+                    .withLabel(Constants.LABEL_APP_KEY)
+                    .list();
+            for (Deployment deployment : deploymentList.getItems()) {
+                // 使用 Deployment 的标签选择器获取 Pods
+                PodList podList = kubernetesClient.pods()
+                        .inNamespace(defaultNamespace)
+                        .withLabels(deployment.getSpec().getSelector().getMatchLabels())
+                        .list();
+
+                boolean isNormal = true;
+                for (Pod pod : podList.getItems()) {
+                    String podName = pod.getMetadata().getName();
+                    String podStatus = pod.getStatus().getPhase();
+                    int restartCount = pod.getStatus().getContainerStatuses()
+                            .stream().mapToInt(ContainerStatus::getRestartCount).sum();
+                    logger.info("k8s cleanup - Pod: " + podName + " Status: " + podStatus + " Restarts: " + restartCount);
+                    if (("Failed".equals(podStatus) || "Unknown".equals(podStatus)) && restartCount > 3) {
+                        isNormal = false;
+                    }
+                }
+            }
+            return CleanupResult.success();
+        } catch (Exception e) {
+            logger.error(Status.GATEWAY_KUBERNETES_CLEANUP_FAILED.getMessage(), e);
+            return CleanupResult.fail(
+                    StrFormatter.format("{}:{}", Status.GATEWAY_KUBERNETES_CLEANUP_FAILED.getMessage(), e.getMessage()));
+        } finally {
+            close();
+        }
     }
 
     private String getIngressUrl(Ingress ingress, String namespace, String clusterId) {

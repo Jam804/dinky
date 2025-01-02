@@ -49,6 +49,7 @@ import org.dinky.gateway.config.FlinkConfig;
 import org.dinky.gateway.config.GatewayConfig;
 import org.dinky.gateway.enums.ActionType;
 import org.dinky.gateway.enums.SavePointType;
+import org.dinky.gateway.result.CleanupResult;
 import org.dinky.gateway.result.GatewayResult;
 import org.dinky.gateway.result.SavePointResult;
 import org.dinky.gateway.result.TestResult;
@@ -396,6 +397,10 @@ public class JobManager {
 
     public static TestResult testGateway(GatewayConfig gatewayConfig) {
         return Gateway.build(gatewayConfig).test();
+    }
+
+    public static CleanupResult cleanup(GatewayConfig gatewayConfig) {
+        return Gateway.build(gatewayConfig).cleanup();
     }
 
     public String exportSql(String sql) {
