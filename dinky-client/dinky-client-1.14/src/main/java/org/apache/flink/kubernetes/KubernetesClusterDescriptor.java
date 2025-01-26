@@ -47,14 +47,8 @@ import org.apache.flink.kubernetes.kubeclient.Endpoint;
 import org.apache.flink.kubernetes.kubeclient.FlinkKubeClient;
 import org.apache.flink.kubernetes.kubeclient.FlinkPod;
 import org.apache.flink.kubernetes.kubeclient.KubernetesJobManagerSpecification;
-import org.apache.flink.kubernetes.kubeclient.decorators.ExternalServiceDecorator;
 import org.apache.flink.kubernetes.kubeclient.factory.KubernetesJobManagerFactory;
 import org.apache.flink.kubernetes.kubeclient.parameters.KubernetesJobManagerParameters;
-import org.apache.flink.kubernetes.shaded.io.fabric8.kubernetes.api.model.ConfigMap;
-import org.apache.flink.kubernetes.shaded.io.fabric8.kubernetes.api.model.HasMetadata;
-import org.apache.flink.kubernetes.shaded.io.fabric8.kubernetes.api.model.KeyToPath;
-import org.apache.flink.kubernetes.shaded.io.fabric8.kubernetes.api.model.KeyToPathBuilder;
-import org.apache.flink.kubernetes.shaded.io.fabric8.kubernetes.api.model.Volume;
 import org.apache.flink.kubernetes.utils.Constants;
 import org.apache.flink.kubernetes.utils.KubernetesUtils;
 import org.apache.flink.runtime.entrypoint.ClusterEntrypoint;
@@ -63,7 +57,7 @@ import org.apache.flink.runtime.highavailability.nonha.standalone.StandaloneClie
 import org.apache.flink.runtime.jobgraph.JobGraph;
 import org.apache.flink.runtime.jobmanager.HighAvailabilityMode;
 import org.apache.flink.runtime.rpc.AddressResolution;
-import org.apache.flink.shaded.guava31.com.google.common.io.Files;
+import org.apache.flink.shaded.guava30.com.google.common.io.Files;
 import org.apache.flink.util.FlinkException;
 import org.apache.flink.util.Preconditions;
 
@@ -77,6 +71,12 @@ import java.util.Optional;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import io.fabric8.kubernetes.api.model.ConfigMap;
+import io.fabric8.kubernetes.api.model.HasMetadata;
+import io.fabric8.kubernetes.api.model.KeyToPath;
+import io.fabric8.kubernetes.api.model.KeyToPathBuilder;
+import io.fabric8.kubernetes.api.model.Volume;
 
 /** Kubernetes specific {@link ClusterDescriptor} implementation. */
 public class KubernetesClusterDescriptor implements ClusterDescriptor<String> {
@@ -107,8 +107,7 @@ public class KubernetesClusterDescriptor implements ClusterDescriptor<String> {
         return () -> {
             final Configuration configuration = new Configuration(flinkConfig);
 
-            final Optional<Endpoint> restEndpoint;
-            restEndpoint = client.getRestEndpoint(clusterId);
+            final Optional<Endpoint> restEndpoint = client.getRestEndpoint(clusterId);
 
             if (restEndpoint.isPresent()) {
                 configuration.setString(RestOptions.ADDRESS, restEndpoint.get().getAddress());
@@ -181,8 +180,7 @@ public class KubernetesClusterDescriptor implements ClusterDescriptor<String> {
     public ClusterClientProvider<String> deployApplicationCluster(
             final ClusterSpecification clusterSpecification, final ApplicationConfiguration applicationConfiguration)
             throws ClusterDeploymentException {
-        if (client.getService(ExternalServiceDecorator.getExternalServiceName(clusterId))
-                .isPresent()) {
+        if (client.getRestService(clusterId).isPresent()) {
             client.stopAndCleanupCluster(clusterId);
             LOG.warn("The Flink cluster {} already exists, automatically stopAndCleanupCluster.", clusterId);
         }
