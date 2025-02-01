@@ -43,8 +43,10 @@ import org.apache.flink.kubernetes.entrypoint.KubernetesApplicationClusterEntryp
 import org.apache.flink.kubernetes.entrypoint.KubernetesSessionClusterEntrypoint;
 import org.apache.flink.kubernetes.kubeclient.Endpoint;
 import org.apache.flink.kubernetes.kubeclient.FlinkKubeClient;
+import org.apache.flink.kubernetes.kubeclient.FlinkKubeClientFactory;
 import org.apache.flink.kubernetes.kubeclient.FlinkPod;
 import org.apache.flink.kubernetes.kubeclient.KubernetesJobManagerSpecification;
+import org.apache.flink.kubernetes.kubeclient.decorators.ExternalServiceDecorator;
 import org.apache.flink.kubernetes.kubeclient.factory.KubernetesJobManagerFactory;
 import org.apache.flink.kubernetes.kubeclient.parameters.KubernetesJobManagerParameters;
 import org.apache.flink.kubernetes.utils.Constants;
@@ -58,7 +60,7 @@ import org.apache.flink.runtime.rpc.AddressResolution;
 import org.apache.flink.util.FlinkException;
 import org.apache.flink.util.Preconditions;
 
-import java.io.File;
+import java.net.URI;
 import java.util.List;
 import java.util.Optional;
 
@@ -74,15 +76,18 @@ public class KubernetesClusterDescriptor implements ClusterDescriptor<String> {
 
     private final Configuration flinkConfig;
 
+    private final FlinkKubeClientFactory clientFactory;
+
     private final FlinkKubeClient client;
 
     private final String clusterId;
 
-    public KubernetesClusterDescriptor(Configuration flinkConfig, FlinkKubeClient client) {
+    public KubernetesClusterDescriptor(Configuration flinkConfig, FlinkKubeClientFactory clientFactory) {
         this.flinkConfig = flinkConfig;
-        this.client = client;
+        this.clientFactory = clientFactory;
+        this.client = clientFactory.fromConfiguration(flinkConfig, "client");
         this.clusterId =
-                checkNotNull(flinkConfig.getString(KubernetesConfigOptions.CLUSTER_ID), "ClusterId must be specified!");
+                checkNotNull(flinkConfig.get(KubernetesConfigOptions.CLUSTER_ID), "ClusterId must be specified!");
     }
 
     @Override
@@ -94,11 +99,14 @@ public class KubernetesClusterDescriptor implements ClusterDescriptor<String> {
         return () -> {
             final Configuration configuration = new Configuration(flinkConfig);
 
-            final Optional<Endpoint> restEndpoint = client.getRestEndpoint(clusterId);
+            final Optional<Endpoint> restEndpoint;
+            try (FlinkKubeClient client = clientFactory.fromConfiguration(configuration, "client")) {
+                restEndpoint = client.getRestEndpoint(clusterId);
+            }
 
             if (restEndpoint.isPresent()) {
-                configuration.setString(RestOptions.ADDRESS, restEndpoint.get().getAddress());
-                configuration.setInteger(RestOptions.PORT, restEndpoint.get().getPort());
+                configuration.set(RestOptions.ADDRESS, restEndpoint.get().getAddress());
+                configuration.set(RestOptions.PORT, restEndpoint.get().getPort());
             } else {
                 throw new RuntimeException(
                         new ClusterRetrieveException("Could not get the rest endpoint of " + clusterId));
@@ -167,7 +175,8 @@ public class KubernetesClusterDescriptor implements ClusterDescriptor<String> {
     public ClusterClientProvider<String> deployApplicationCluster(
             final ClusterSpecification clusterSpecification, final ApplicationConfiguration applicationConfiguration)
             throws ClusterDeploymentException {
-        if (client.getRestService(clusterId).isPresent()) {
+        if (client.getService(ExternalServiceDecorator.getExternalServiceName(clusterId))
+                .isPresent()) {
             client.stopAndCleanupCluster(clusterId);
             LOG.warn("The Flink cluster {} already exists, automatically stopAndCleanupCluster.", clusterId);
         }
@@ -190,7 +199,7 @@ public class KubernetesClusterDescriptor implements ClusterDescriptor<String> {
         // No need to do pipelineJars validation if it is a PyFlink job.
         if (!(PackagedProgramUtils.isPython(applicationConfiguration.getApplicationClassName())
                 || PackagedProgramUtils.isPython(applicationConfiguration.getProgramArguments()))) {
-            final List<File> pipelineJars = KubernetesUtils.checkJarFileForApplicationMode(flinkConfig);
+            final List<URI> pipelineJars = KubernetesUtils.checkJarFileForApplicationMode(flinkConfig);
             Preconditions.checkArgument(pipelineJars.size() == 1, "Should only have one jar");
         }
 
@@ -218,9 +227,9 @@ public class KubernetesClusterDescriptor implements ClusterDescriptor<String> {
             throws ClusterDeploymentException {
         final ClusterEntrypoint.ExecutionMode executionMode =
                 detached ? ClusterEntrypoint.ExecutionMode.DETACHED : ClusterEntrypoint.ExecutionMode.NORMAL;
-        flinkConfig.setString(ClusterEntrypoint.INTERNAL_CLUSTER_EXECUTION_MODE, executionMode.toString());
+        flinkConfig.set(ClusterEntrypoint.INTERNAL_CLUSTER_EXECUTION_MODE, executionMode.toString());
 
-        flinkConfig.setString(KubernetesConfigOptionsInternal.ENTRY_POINT_CLASS, entryPoint);
+        flinkConfig.set(KubernetesConfigOptionsInternal.ENTRY_POINT_CLASS, entryPoint);
 
         // Rpc, blob, rest, taskManagerRpc ports need to be exposed, so update them to fixed values.
         KubernetesUtils.checkAndUpdatePortConfigOption(flinkConfig, BlobServerOptions.PORT, Constants.BLOB_SERVER_PORT);
@@ -229,7 +238,7 @@ public class KubernetesClusterDescriptor implements ClusterDescriptor<String> {
         KubernetesUtils.checkAndUpdatePortConfigOption(flinkConfig, RestOptions.BIND_PORT, Constants.REST_PORT);
 
         if (HighAvailabilityMode.isHighAvailabilityModeActivated(flinkConfig)) {
-            flinkConfig.setString(HighAvailabilityOptions.HA_CLUSTER_ID, clusterId);
+            flinkConfig.set(HighAvailabilityOptions.HA_CLUSTER_ID, clusterId);
             KubernetesUtils.checkAndUpdatePortConfigOption(
                     flinkConfig,
                     HighAvailabilityOptions.HA_JOB_MANAGER_PORT_RANGE,

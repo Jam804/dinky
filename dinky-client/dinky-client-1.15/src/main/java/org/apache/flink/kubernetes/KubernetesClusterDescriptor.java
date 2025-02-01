@@ -47,6 +47,7 @@ import org.apache.flink.kubernetes.kubeclient.FlinkPod;
 import org.apache.flink.kubernetes.kubeclient.KubernetesJobManagerSpecification;
 import org.apache.flink.kubernetes.kubeclient.factory.KubernetesJobManagerFactory;
 import org.apache.flink.kubernetes.kubeclient.parameters.KubernetesJobManagerParameters;
+import org.apache.flink.kubernetes.kubeclient.resources.KubernetesService;
 import org.apache.flink.kubernetes.utils.Constants;
 import org.apache.flink.kubernetes.utils.KubernetesUtils;
 import org.apache.flink.runtime.entrypoint.ClusterEntrypoint;
@@ -167,7 +168,8 @@ public class KubernetesClusterDescriptor implements ClusterDescriptor<String> {
     public ClusterClientProvider<String> deployApplicationCluster(
             final ClusterSpecification clusterSpecification, final ApplicationConfiguration applicationConfiguration)
             throws ClusterDeploymentException {
-        if (client.getRestService(clusterId).isPresent()) {
+        if (client.getService(KubernetesService.ServiceType.REST_SERVICE, clusterId)
+                .isPresent()) {
             client.stopAndCleanupCluster(clusterId);
             LOG.warn("The Flink cluster {} already exists, automatically stopAndCleanupCluster.", clusterId);
         }
