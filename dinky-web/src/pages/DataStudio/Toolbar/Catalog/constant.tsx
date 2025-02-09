@@ -17,26 +17,14 @@
  *
  */
 
-package org.dinky.job;
+import { MenuItemType } from "antd/es/menu/interface";
+import { DeleteTwoTone } from "@ant-design/icons";
+import { l } from "@/utils/intl";
 
-import org.dinky.data.job.JobStatement;
-import org.dinky.data.result.SqlExplainResult;
-
-import org.apache.flink.core.execution.JobClient;
-import org.apache.flink.runtime.rest.messages.JobPlanInfo;
-import org.apache.flink.streaming.api.graph.StreamGraph;
-
-import java.util.Optional;
-
-public interface JobRunner {
-
-    Optional<JobClient> execute(JobStatement jobStatement) throws Exception;
-
-    void run(JobStatement jobStatement) throws Exception;
-
-    SqlExplainResult explain(JobStatement jobStatement);
-
-    StreamGraph getStreamGraph(JobStatement jobStatement);
-
-    JobPlanInfo getJobPlanInfo(JobStatement jobStatement);
-}
+export const TABLE_RIGHT_MENU = (): MenuItemType[] => [
+  {
+    key: 'delete',
+    icon: <DeleteTwoTone twoToneColor={'red'}/>,
+    label: l('button.delete')
+  }
+];
